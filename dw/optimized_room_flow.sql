@@ -59,7 +59,7 @@ sum(case when info_type = 48 then count else 0 end)as app_pv,
 sum(case when info_type = 49 then count else 0 end)as app_uv,
 sum(case when info_type = 7 then count else 0 end)as bullet_screen,
 sum(case when info_type = 5 then count else 0 end)as flower
-from ods.ods_report_daily_room_pv_uv pu
+from ods.ods_report_daily_room_pv_uv
 where day='2016-08-26'
 and info_type in(1,7,8,48,49)
 group by day,room_id)k1

@@ -176,7 +176,7 @@ group by date,roomid)k8    on(k1.day=k8.day and k1.room_id=k8.room_id)
 left outer join
 
 
--- 计算播放时长，对endtime是0001开头的处理成当日最后时刻
+-- 计算播放时长，对endtime是0001开头的或者跨天的处理成当日最后时刻
 (select day,roomid as room_id,
 round(sum(unix_timestamp(
     case when

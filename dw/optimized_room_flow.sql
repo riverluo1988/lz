@@ -178,8 +178,12 @@ left outer join
 
 -- 计算播放时长，对endtime是0001开头的处理成当日最后时刻
 (select day,roomid as room_id,
-round(sum(unix_timestamp(case when endtime like '0001-01-01%'
-then concat_ws(' ',to_date(begintime),'23:59:59') else endtime end)
+round(sum(unix_timestamp(
+    case when
+    endtime like '0001-01-01%'then concat_ws(' ',to_date(begintime),'23:59:59')
+    when
+    datediff(endtime,begintime)>1 then concat_ws(' ',to_date(begintime),'23:59:59')
+    else endtime end)
 -unix_timestamp(begintime))/60) as play_minites
 from ods.ods_report_play_time
 where day='2016-08-26'

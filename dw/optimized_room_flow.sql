@@ -1,5 +1,5 @@
 --- 建立临时表来计算pcu,acu
-create table dw.dw_online_temp
+create table dw.dw_room_online_count_temp
 as
 select time, dt, room_id,
 sum(case when period=360 then count else 0 end) as outer_ol,
@@ -15,7 +15,7 @@ group by time, dt, room_id;
 
 select
 '2016-08-26' as date,
-k0.room_id as room_id,
+k1.room_id as room_id, --能显示8位的房间ID
 k0.domain as domain,
 k0.user_id as user_id,
 k0.user_title as user_group,
@@ -31,6 +31,7 @@ k1.bullet_screen as bullet_screen_num,
 k1.flower as flower_num,
 
 nvl(k6.awt,0) as awt,
+k3.peak_time,
 nvl(k2.pcu_out,0) as pcu_out,
 nvl(k2.pcu_in,0) as pcu_in,
 nvl(k2.pcu_encripted,0) as pcu_encrypted,
@@ -38,15 +39,16 @@ nvl(k2.acu_out,1) as acu_out,
 nvl(k2.acu_in,1)as acu_in,
 nvl(k2.acu_encripted,1)as acu_encrypted,
 
-k3.peak_time,
+
 
 nvl(k4.total_price,0) as total_price,
-nvl(k4.total_tools_num,0)as total_tools_num,
+nvl(k4.total_item_num,0)as total_item_num,
 nvl(k4.total_paying_user,0) as total_paying_user_num,
 nvl(k5.daily_subscription,0)as daily_subscription_num,
 0 as total_subscription_num,
 
-nvl(k7.play_minites,0) as play_minutes,
+nvl(k7.play_minutes,0) as play_minutes,
+if(k7.play_minutes is null,0,1) as is_broadcast,
 nvl(k8.vv,0) as vv,
 nvl(k8.valid_vv,0) as valid_vv
 
@@ -76,7 +78,7 @@ max(encripted_ol)as pcu_encripted,
 nvl(cast(sum(outer_ol)/sum(if(outer_ol>0,1,0)) as decimal),0) as acu_out, -- 防止在线为0的分钟拉低平均数
 nvl(cast(sum(inner_ol)/sum(if(inner_ol>0,1,0)) as decimal),0) as acu_in,
 nvl(cast(sum(encripted_ol)/sum(if(encripted_ol>0,1,0)) as decimal),0) as acu_encripted
-from dw.dw_online_temp
+from dw.dw_room_online_count_temp
 where dt='20160826'
 group by dt,room_id)k2   on(k1.day=k2.day and k1.room_id=k2.room_id)
 
@@ -97,11 +99,11 @@ table2.pcu_in
 from
 (select time,
 dt,room_id, inner_ol
-from dw.dw_online_temp
+from dw.dw_room_online_count_temp
 where dt='20160826')table1
 join
 (select dt,room_id,max(inner_ol) as pcu_in
-from dw.dw_online_temp
+from dw.dw_room_online_count_temp
 where dt='20160826'
 group by dt, room_id)table2
 on
@@ -114,8 +116,8 @@ left outer join
 
 (select day,room_id,
 round(sum(price),2) as total_price,
-cast(sum(item_num) as int) as total_tools_num,
-count(distinct operatorid) as total_paying_user
+cast(sum(item_num) as int) as total_item_num,
+count(distinct operator_id) as total_paying_user
 from  ods.ods_cdb_trade
 where day='2016-08-26'
 and trade_status =1  --交易成功
@@ -127,11 +129,11 @@ group by day,room_id)k4   on(k1.day=k4.day and k1.room_id=k4.room_id)
 
 left outer join
 
-(select day, roomid as room_id, count(1) as daily_subscription
+(select day, room_id, count(1) as daily_subscription
 from ods.ods_room_subscription
 where day='2016-08-26'
-and actived='true'
-group by day,roomid)k5   on(k1.day=k5.day and k1.room_id=k5.room_id)
+and actived=1
+group by day,room_id)k5   on(k1.day=k5.day and k1.room_id=k5.room_id)
 
 
 left outer join
@@ -177,17 +179,17 @@ left outer join
 
 
 -- 计算播放时长，对endtime是0001开头的或者跨天的处理成当日最后时刻
-(select day,roomid as room_id,
+(select day,room_id,
 round(sum(unix_timestamp(
     case when
-    endtime like '0001-01-01%'then concat_ws(' ',to_date(begintime),'23:59:59')
+    end_time like '0001-01-01%'then concat_ws(' ',to_date(begin_time),'23:59:59')
     when
-    datediff(endtime,begintime)>1 then concat_ws(' ',to_date(begintime),'23:59:59')
-    else endtime end)
--unix_timestamp(begintime))/60) as play_minites
+    datediff(end_time,begin_time)>1 then concat_ws(' ',to_date(begin_time),'23:59:59')
+    else end_time end)
+-unix_timestamp(begin_time))/60) as play_minutes
 from ods.ods_report_play_time
 where day='2016-08-26'
-group by day,roomid)k7    on(k1.day=k7.day and k1.room_id=k7.room_id)
+group by day,room_id)k7    on(k1.day=k7.day and k1.room_id=k7.room_id)
 
 left outer join
 

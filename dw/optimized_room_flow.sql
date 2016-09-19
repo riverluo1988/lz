@@ -179,14 +179,18 @@ group by date,roomid)k8    on(k1.day=k8.day and k1.room_id=k8.room_id)
 left outer join
 
 
--- 计算播放时长，对endtime是0001开头的或者跨天的处理成当日最后时刻
+-- 计算播放时长，对endtime是0001开头的,跨天的处理成当日最后时刻
+-- 结束时间早于开始时间的，处理成开始时间
 (select day,room_id,
 round(sum(unix_timestamp(
-    case when
-    end_time like '0001-01-01%'then concat_ws(' ',to_date(begin_time),'23:59:59')
-    when
-    datediff(end_time,begin_time)>1 then concat_ws(' ',to_date(begin_time),'23:59:59')
-    else end_time end)
+case when
+end_time like '0001-01-01%'then concat_ws(' ',to_date(begin_time),'23:59:59')
+when
+to_date(end_time)!=to_date(begin_time) then concat_ws(' ',to_date(begin_time),'23:59:59')
+when
+unix_timestamp(end_time)<unix_timestamp(begin_time)
+then unix_timestamp(begin_time)
+else end_time end)
 -unix_timestamp(begin_time))/60) as play_minutes
 from ods.ods_report_play_time
 where day='2016-08-26'

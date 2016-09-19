@@ -1,14 +1,16 @@
 --- 建立临时表来计算pcu,acu
 create table dw.dw_room_online_count_temp
 as
-select time, dt, room_id,
+select
+from_unixtime(unix_timestamp(time)) as time,
+day, room_id,
 sum(case when period=360 then count else 0 end) as outer_ol,
 sum(case when period in(36,38) then count else 0 end) as inner_ol,
 sum(case when period=38 then count else 0 end) as encripted_ol
-from ods.ods_room_online_count
-where from_unixtime(unix_timestamp(dt,'yyyyMMdd'),'yyyy-MM-dd')='2016-08-26'
+from ods.ods_report_room_online_count
+where day = '2016-08-26'
 and period in(36,38,360)
-group by time, dt, room_id;
+group by time, day, room_id;
 
 
 
@@ -43,7 +45,7 @@ nvl(k2.acu_encripted,1)as acu_encrypted,
 
 nvl(k4.total_price,0) as total_price,
 nvl(k4.total_item_num,0)as total_item_num,
-nvl(k4.total_paying_user,0) as total_paying_user_num,
+nvl(k4.total_paying_user_num,0) as total_paying_user_num,
 nvl(k5.daily_subscription,0)as daily_subscription_num,
 0 as total_subscription_num,
 
@@ -69,8 +71,7 @@ group by day,room_id)k1
 left outer join
 
 
-(select
-from_unixtime(unix_timestamp(dt,'yyyyMMdd'),'yyyy-MM-dd') as day,
+(select day,
 room_id,
 max(outer_ol) as pcu_out,
 max(inner_ol) as pcu_in,
@@ -79,8 +80,8 @@ nvl(cast(sum(outer_ol)/sum(if(outer_ol>0,1,0)) as decimal),0) as acu_out, -- 防
 nvl(cast(sum(inner_ol)/sum(if(inner_ol>0,1,0)) as decimal),0) as acu_in,
 nvl(cast(sum(encripted_ol)/sum(if(encripted_ol>0,1,0)) as decimal),0) as acu_encripted
 from dw.dw_room_online_count_temp
-where dt='20160826'
-group by dt,room_id)k2   on(k1.day=k2.day and k1.room_id=k2.room_id)
+where day = '2016-08-26'
+group by day,room_id)k2   on(k1.day=k2.day and k1.room_id=k2.room_id)
 
 
 
@@ -88,28 +89,28 @@ left outer join
 
 
 (select
-from_unixtime(unix_timestamp(m.dt,'yyyyMMdd'),'yyyy-MM-dd') as day,
+m.day as day,
 m.room_id,m.pcu_in,min(m.pcu_time) as peak_time
 from
 (select
-table1.dt,
-from_unixtime(table1.time,'yyyy-MM-dd HH:mm:ss') as pcu_time,
+table1.day,
+table1.time as pcu_time,
 table1.room_id,
 table2.pcu_in
 from
 (select time,
-dt,room_id, inner_ol
+day,room_id, inner_ol
 from dw.dw_room_online_count_temp
-where dt='20160826')table1
+where day = '2016-08-26')table1
 join
-(select dt,room_id,max(inner_ol) as pcu_in
+(select day,room_id,max(inner_ol) as pcu_in
 from dw.dw_room_online_count_temp
-where dt='20160826'
-group by dt, room_id)table2
+where day = '2016-08-26'
+group by day, room_id)table2
 on
-(table1.dt=table2.dt and table1.room_id=table2.room_id
+(table1.day = table2.day and table1.room_id = table2.room_id
 and table1.inner_ol=table2.pcu_in))m
-group by m.dt,m.room_id,m.pcu_in)k3    on(k1.day=k3.day and k1.room_id=k3.room_id)
+group by m.day,m.room_id,m.pcu_in)k3    on(k1.day=k3.day and k1.room_id=k3.room_id)
 
 
 left outer join
@@ -117,13 +118,13 @@ left outer join
 (select day,room_id,
 round(sum(price),2) as total_price,
 cast(sum(item_num) as int) as total_item_num,
-count(distinct operator_id) as total_paying_user
+count(distinct operator_id) as total_paying_user_num
 from  ods.ods_cdb_trade
 where day='2016-08-26'
-and trade_status =1  --交易成功
-and room_id>0  --有效房间
-and product_name='platform' --直播平台
-and item_id >0   --有效道具
+and trade_status =1
+and room_id>0
+and product_name='platform'
+and item_id >0
 group by day,room_id)k4   on(k1.day=k4.day and k1.room_id=k4.room_id)
 
 

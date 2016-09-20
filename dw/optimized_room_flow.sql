@@ -25,6 +25,7 @@ k0.id as category_id,
 k0.name as category_name,
 k0.cdomain as category_domain,
 
+
 k1.web_pv as web_pv,
 k1.web_uv as web_uv,
 k1.app_pv as app_pv,
@@ -32,7 +33,7 @@ k1.app_uv as app_uv,
 k1.bullet_screen as bullet_screen_num,
 k1.flower as flower_num,
 
-nvl(k6.awt,0) as awt,
+
 k3.peak_time,
 nvl(k2.pcu_out,0) as pcu_out,
 nvl(k2.pcu_in,0) as pcu_in,
@@ -42,17 +43,18 @@ nvl(k2.acu_in,1)as acu_in,
 nvl(k2.acu_encripted,1)as acu_encrypted,
 
 
-
 nvl(k4.total_price,0) as total_price,
 nvl(k4.total_item_num,0)as total_item_num,
 nvl(k4.total_paying_user_num,0) as total_paying_user_num,
 nvl(k5.daily_subscription,0)as daily_subscription_num,
 0 as total_subscription_num,
 
+nvl(k6.vv,0) as vv,
+nvl(k6.valid_vv,0) as valid_vv,
+nvl(k6.awt,0) as awt,
+
 nvl(k7.play_minutes,0) as play_minutes,
-if(k7.play_minutes is null,0,1) as is_broadcast,
-nvl(k8.vv,0) as vv,
-nvl(k8.valid_vv,0) as valid_vv
+if(k7.play_minutes is null,0,1) as is_broadcast
 
 from
 
@@ -68,6 +70,7 @@ where day='2016-08-26'
 and info_type in(1,5,7,8,48,49)
 group by day,room_id)k1
 
+
 left outer join
 
 
@@ -82,7 +85,6 @@ nvl(cast(sum(encripted_ol)/sum(if(encripted_ol>0,1,0)) as decimal),0) as acu_enc
 from dw.dw_room_online_count_temp
 where day = '2016-08-26'
 group by day,room_id)k2   on(k1.day=k2.day and k1.room_id=k2.room_id)
-
 
 
 left outer join
@@ -115,6 +117,7 @@ group by m.day,m.room_id,m.pcu_in)k3    on(k1.day=k3.day and k1.room_id=k3.room_
 
 left outer join
 
+
 (select day,room_id,
 round(sum(price),2) as total_price,
 cast(sum(item_num) as int) as total_item_num,
@@ -130,6 +133,7 @@ group by day,room_id)k4   on(k1.day=k4.day and k1.room_id=k4.room_id)
 
 left outer join
 
+
 (select day, room_id, count(1) as daily_subscription
 from ods.ods_room_subscription
 where day='2016-08-26'
@@ -140,40 +144,28 @@ group by day,room_id)k5   on(k1.day=k5.day and k1.room_id=k5.room_id)
 left outer join
 
 
-
 -- 计算average watch time,playduration是毫秒
 -- 如果ostype是PC，有效播放时长就是playduration字段，否则有效播放时长是playduration-stuckduration
+-- valid_vv是播放时长大于等于一分钟的
 
 (select
 from_unixtime(unix_timestamp(player.date,'yyyyMMdd'),'yyyy-MM-dd') as day,
 player.roomid as room_id,
-cast(sum(player.play_duration)/count(distinct player.deviceid)/1000/60 as decimal) as awt
+nvl(cast(sum(player.play_duration)/
+count(distinct (case when player.play_duration>0
+then deviceid else null end))/1000/60 as decimal),0) as awt,
+count(1) as vv,
+sum(case when cast(play_duration as bigint)>=60000 then 1 else 0 end)as valid_vv
 from
-(select date,roomid,
-(case when ostype='PC' then playduration
-else (playduration - if(stuckduration='NaN',0,stuckduration))end) as play_duration,
-deviceid
-from  log.playerlog_etl
-where cast(playduration as bigint) between 0 and 86400000 --valid
+(select date, roomid, deviceid,ip,
+(case when ostype='PC' then playduration else
+(playduration - if(stuckduration='NaN',0,stuckduration)) end)as play_duration
+from log.playerlog_etl
+where cast(playduration as bigint) between 0 and 86400000
+and cast(stuckduration as bigint)>=0
 and date='20160826'
 and ostype in('PC','A','I'))player
-group by player.date,player.roomid)k6   on(k1.day=k6.day and k1.room_id=k6.room_id)
-
-
-
-left outer join
-
--- 计算vv,valid_vv，播放一分钟及以上为有效vv
-(select from_unixtime(unix_timestamp(date,'yyyyMMdd'),'yyyy-MM-dd') as day,
-roomid as room_id,
-sum(case when cast(playduration as bigint)>=60000 and
-cast(playduration as bigint)<=86400000 then 1 else 0 end)as valid_vv,
-sum(case when cast(playduration as bigint)>0 and
-cast(playduration as bigint)<=86400000 then 1 else 0 end)as vv
-from log.playerlog_etl
-where date='20160826'
-and ostype in ('PC','A','I')
-group by date,roomid)k8    on(k1.day=k8.day and k1.room_id=k8.room_id)
+group by player.date,player.roomid) k6 on(k1.day=k6.day and k1.room_id=k6.room_id)
 
 
 left outer join
@@ -181,6 +173,7 @@ left outer join
 
 -- 计算播放时长，对endtime是0001开头的,跨天的处理成当日最后时刻
 -- 结束时间早于开始时间的，处理成开始时间
+
 (select day,room_id,
 round(sum(unix_timestamp(
 case when
@@ -196,7 +189,9 @@ from ods.ods_report_play_time
 where day='2016-08-26'
 group by day,room_id)k7    on(k1.day=k7.day and k1.room_id=k7.room_id)
 
+
 left outer join
+
 
 (select /*+ MAPJOIN(c) */
 r.room_id,r.domain, r.user_id, r.user_title,

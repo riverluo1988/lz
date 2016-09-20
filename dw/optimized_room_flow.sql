@@ -47,7 +47,7 @@ nvl(k4.total_price,0) as total_price,
 nvl(k4.total_item_num,0)as total_item_num,
 nvl(k4.total_paying_user_num,0) as total_paying_user_num,
 nvl(k5.daily_subscription,0)as daily_subscription_num,
-0 as total_subscription_num,
+nvl(k8.count,0) as total_subscription_num,
 
 nvl(k6.vv,0) as vv,
 nvl(k6.valid_vv,0) as valid_vv,
@@ -146,7 +146,7 @@ left outer join
 
 -- 计算average watch time,playduration是毫秒
 -- 如果ostype是PC，有效播放时长就是playduration字段，否则有效播放时长是playduration-stuckduration
--- valid_vv是播放时长大于等于一分钟的
+-- valid_vv是播放时长大于等于15秒的
 
 (select
 from_unixtime(unix_timestamp(player.date,'yyyyMMdd'),'yyyy-MM-dd') as day,
@@ -155,7 +155,7 @@ nvl(cast(sum(player.play_duration)/
 count(distinct (case when player.play_duration>0
 then deviceid else null end))/1000/60 as decimal),0) as awt,
 count(1) as vv,
-sum(case when cast(play_duration as bigint)>=60000 then 1 else 0 end)as valid_vv
+sum(case when cast(play_duration as bigint)>=15000 then 1 else 0 end)as valid_vv
 from
 (select date, roomid, deviceid,ip,
 (case when ostype='PC' then playduration else
@@ -163,7 +163,7 @@ from
 from log.playerlog_etl
 where cast(playduration as bigint) between 0 and 86400000
 and cast(stuckduration as bigint)>=0
-and date='20160826'
+and from_unixtime(unix_timestamp(date,'yyyyMMdd'),'yyyy-MM-dd')='2016-08-26'
 and ostype in('PC','A','I'))player
 group by player.date,player.roomid) k6 on(k1.day=k6.day and k1.room_id=k6.room_id)
 
@@ -188,6 +188,15 @@ else end_time end)
 from ods.ods_report_play_time
 where day='2016-08-26'
 group by day,room_id)k7    on(k1.day=k7.day and k1.room_id=k7.room_id)
+
+
+left outer join
+
+
+(select
+day, room_id, count
+from ods_report_total_room_subscription
+where day='2016-08-26')k8  on(k1.day=k8.day and k1.room_id=k8.room_id)
 
 
 left outer join

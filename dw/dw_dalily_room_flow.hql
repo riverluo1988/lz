@@ -9,7 +9,7 @@ day, room_id,
 sum(case when period=360 then count else 0 end) as outer_ol,
 sum(case when period in(36,38) then count else 0 end) as inner_ol,
 sum(case when period=38 then count else 0 end) as encripted_ol
-from ods.ods_report_room_online_count
+from ods.ods_report_room_online_count_etl
 where day = '${hiveconf:y_date}'
 and period in(36,38,360)
 group by time, day, room_id;
@@ -174,15 +174,13 @@ group by player.date,player.roomid) k6 on(k1.day=k6.day and k1.room_id=k6.room_i
 left outer join
 
 
--- 计算播放时长，对endtime是0001开头的,跨天的处理成当日最后时刻
+-- 计算播放时长，对endtime是0001开头的
 -- 结束时间早于开始时间的，处理成开始时间
 
 (select day,room_id,
 round(sum(unix_timestamp(
 case when
 end_time like '0001-01-01%'then concat_ws(' ',to_date(begin_time),'23:59:59')
-when
-to_date(end_time)!=to_date(begin_time) then concat_ws(' ',to_date(begin_time),'23:59:59')
 when
 unix_timestamp(end_time)<unix_timestamp(begin_time)
 then unix_timestamp(begin_time)

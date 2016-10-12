@@ -158,16 +158,19 @@ nvl(cast(sum(player.play_duration)/
 count(distinct (case when player.play_duration>0
 then deviceid else null end))/1000/60 as decimal),0) as awt,
 sum(case when cast(play_duration as bigint)>0 then 1 else 0 end)as vv,
-sum(case when cast(play_duration as bigint)>=15000 then 1 else 0 end)as valid_vv
+sum(case when cast(play_duration as bigint)>=15000 then 1 else 0 end)as valid_vv,
+sum(if(player.play_duration > 0, player.play_duration, 0)) as play_duration,
+count(distinct (case when player.play_duration > 0 then deviceid else null end)) as vv_device,
+count(distinct (case when player.play_duration >= 15000 then deviceid else null end)) as valid_vv_device
 from
 (select date, roomid, deviceid,ip,
-(case when ostype='PC' then playduration else
+(case substr(ostype, 1, 2) = 'PC' then playduration else
 (playduration - if(stuckduration='NaN',0,stuckduration)) end)as play_duration
 from log.playerlog_etl
 where cast(playduration as bigint) between 0 and 86400000
 and cast(stuckduration as bigint)>=0
 and from_unixtime(unix_timestamp(date,'yyyyMMdd'),'yyyy-MM-dd')='${hiveconf:y_date}'
-and ostype in('PC','A','I'))player
+)player
 group by player.date,player.roomid) k6 on(k1.day=k6.day and k1.room_id=k6.room_id)
 
 

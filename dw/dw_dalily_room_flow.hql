@@ -57,7 +57,10 @@ nvl(k6.valid_vv,0) as valid_vv,
 nvl(k6.awt,0) as awt,
 
 nvl(k7.play_minutes,0) as play_minutes,
-if(k7.play_minutes is null,0,1) as is_broadcast
+if(k7.play_minutes is null,0,1) as is_broadcast,
+nvl(k6.play_duration, 0) as play_duration,
+nvl(k6.vv_device, 0) as vv_device,
+nvl(k6.valid_vv_device, 0) as valid_vv_device
 
 from
 

@@ -155,26 +155,30 @@ left outer join
 -- valid_vv是播放时长大于等于15秒的
 
 (select
-from_unixtime(unix_timestamp(player.date,'yyyyMMdd'),'yyyy-MM-dd') as day,
-player.roomid as room_id,
-nvl(cast(sum(player.play_duration)/
-count(distinct (case when player.play_duration>0
-then deviceid else null end))/1000/60 as decimal),0) as awt,
-sum(case when cast(play_duration as bigint)>0 then 1 else 0 end)as vv,
-sum(case when cast(play_duration as bigint)>=15000 then 1 else 0 end)as valid_vv,
-sum(if(player.play_duration > 0, player.play_duration, 0)) as play_duration,
-count(distinct (case when player.play_duration > 0 then deviceid else null end)) as vv_device,
-count(distinct (case when player.play_duration >= 15000 then deviceid else null end)) as valid_vv_device
-from
-(select date, roomid, deviceid,ip,
-(case substr(ostype, 1, 2) = 'PC' then playduration else
-(playduration - if(stuckduration='NaN',0,stuckduration)) end)as play_duration
-from log.playerlog_etl
-where cast(playduration as bigint) between 0 and 86400000
-and cast(stuckduration as bigint)>=0
-and from_unixtime(unix_timestamp(date,'yyyyMMdd'),'yyyy-MM-dd')='${hiveconf:y_date}'
-)player
-group by player.date,player.roomid) k6 on(k1.day=k6.day and k1.room_id=k6.room_id)
+    from_unixtime(unix_timestamp(player.date, 'yyyyMMdd'), 'yyyy-MM-dd') as day,
+    player.roomid as room_id,
+    nvl(cast(sum(player.play_duration)/count(distinct (case when player.play_duration > 0 then deviceid else null end))/1000/60 as decimal), 0) as awt,
+    sum(case when cast(play_duration as bigint) > 0 then 1 else 0 end) as vv,
+    sum(case when cast(play_duration as bigint) >= 15000 then 1 else 0 end) as valid_vv,
+    cast(sum(if(player.play_duration > 0, player.play_duration, 0))/1000/60 as decimal) as play_duration,
+    count(distinct (case when player.play_duration > 0 then deviceid else null end)) as vv_device,
+    count(distinct (case when player.play_duration >= 15000 then deviceid else null end)) as valid_vv_device
+from (
+    select
+        date,
+        roomid,
+        deviceid,
+        ip,
+        case
+            when substr(ostype, 1, 2) = 'PC' then playduration
+            else (playduration - if(stuckduration = 'NaN', 0, stuckduration))
+        end as play_duration
+    from log.playerlog_etl
+    where cast(playduration as bigint) between 0 and 86400000
+    and cast(stuckduration as bigint) >= 0
+    and from_unixtime(unix_timestamp(date,'yyyyMMdd'),'yyyy-MM-dd')='${hiveconf:y_date}'
+) player
+group by player.date, player.roomid) k6 on(k1.day=k6.day and k1.room_id=k6.room_id)
 
 
 left outer join

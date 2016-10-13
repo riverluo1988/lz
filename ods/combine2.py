@@ -18,7 +18,7 @@ while True:
 
     row = string.strip(line)
     data = string.split(row)
-    if len(data) != 11:
+    if len(data) != 20:
         day = data[0]
         room_id = data[1]
         domain = data[2]
@@ -37,26 +37,41 @@ while True:
             end_flower_count = int(data[11])
         except:
             end_flower_count = 0
-        gameid = data[12]
-        gamename = data[13]
-        title = ' '.join(data[14:-1])
+        from_qq = data[12]
+        live_permission = data[13]
+        live_source_type = data[14]
+        live_stream_type = data[15]
+        gameid = data[16]
+        gamename = data[17]
+        title = ' '.join(data[18:-1])
         is_live = data[-1]
     else:
         day,room_id, domain, beginday, begintime, endday, endtime, max_viewer,\
-        accumulative_viewer_total, execute_times, begin_flower_count, end_flower_count, gameid,\
-        gamename, title, is_live = data
+        accumulative_viewer_total, execute_times, begin_flower_count, end_flower_count,\
+        from_qq,live_permission,live_source_type, live_stream_type,\
+        gameid,gamename, title, is_live = data
+
+        max_viewer = int(max_viewer)
+        accumulative_viewer_total = int(accumulative_viewer_total)
+        execute_times = int(execute_times)
+        try:
+            begin_flower_count = int(begin_flower_count)
+        except:
+            begin_flower_count = 0
+        try:
+            end_flower_count = int(end_flower_count)
+        except:
+            end_flower_count = 0
+
 
     begintime = datetime.strptime(beginday + ' '+begintime,'%Y-%m-%d %H:%M:%S')
     endtime = datetime.strptime(endday + ' '+endtime,'%Y-%m-%d %H:%M:%S')
 
 
-
-
-
     if name != title:
         if name !='\tplu':
-            print '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s'\
-            %(x,y,z,b,e,r,s,t,u,v,o,p,name,q)
+            print '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s'\
+            %(x,y,z,b,e,r,s,t,u,v,h,i,j,k,o,p,name,q)
         name = title
         b = begintime
         e = endtime
@@ -68,6 +83,10 @@ while True:
         t = execute_times
         u = begin_flower_count
         v = end_flower_count
+        h = from_qq
+        i = live_permission
+        j = live_source_type
+        k = live_stream_type
         o = gameid
         p = gamename
         q = is_live
@@ -91,8 +110,8 @@ while True:
 
 
             else:
-                print '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s'\
-                %(x,y,z,b,e,r,s,t,u,v,o,p,name,q)
+                print '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s'\
+                %(x,y,z,b,e,r,s,t,u,v,h,i,j,k,o,p,name,q)
                 name = title
                 b = begintime
                 e = endtime
@@ -102,16 +121,18 @@ while True:
                 u = begin_flower_count
                 v = end_flower_count
         else:
-            print '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s'%(day,room_id,domain,begintime,endtime,max_viewer,accumulative_viewer_total,\
-            execute_times,begin_flower_count,end_flower_count,gameid,gamename,title,\
-            is_live)
+            print '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s'\
+            %(day,room_id,domain,begintime,endtime,max_viewer,accumulative_viewer_total,\
+            execute_times,begin_flower_count,end_flower_count,\
+            from_qq,live_permission,live_source_type, live_stream_type,
+            gameid,gamename,title,is_live)
 
 
 
 
 
 
-print '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s' \
-%(x,y,z,b,e,r,s,t,u,v,o,p,name,q)
+print '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s' \
+%(x,y,z,b,e,r,s,t,u,v,h,i,j,k,o,p,name,q)
 
 

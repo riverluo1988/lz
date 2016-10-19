@@ -195,7 +195,7 @@ when
 unix_timestamp(end_time)<unix_timestamp(begin_time)
 then unix_timestamp(begin_time)
 else end_time end)
--unix_timestamp(begin_time))/60) as play_minutes
+-unix_timestamp(begin_time))/60,2) as play_minutes
 from ods.ods_report_play_time
 where day='${hiveconf:y_date}'
 group by day,room_id)k7    on(k1.day=k7.day and k1.room_id=k7.room_id)

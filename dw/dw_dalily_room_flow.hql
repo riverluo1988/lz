@@ -166,7 +166,7 @@ left outer join
 from (
     select
         date,
-        roomid,
+        cast(trim(roomid)as bigint)as roomid,
         deviceid,
         ip,
         case

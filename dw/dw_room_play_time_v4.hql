@@ -133,7 +133,7 @@ from
 join
     (
     select
-        date, roomid as room_id,
+        date, cast(trim(roomid)as bigint) as room_id,
         from_unixtime(floor(cast(createtime as bigint)/1000)) as createtime,
         (case
             when substr(ostype, 1, 2)='PC' then playduration
